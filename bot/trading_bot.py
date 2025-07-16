@@ -1,4 +1,3 @@
-# trading_bot.py
 from telegram.ext import Application, Defaults
 from telegram.constants import ParseMode
 from utils.config import load_config
