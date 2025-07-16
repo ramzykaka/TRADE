@@ -3,13 +3,13 @@ import asyncio
 import logging
 from telegram.ext import Application, Defaults
 from telegram.constants import ParseMode
-from utils.config import load_config
+from utils.config import settings
 from binance.client import Client  # pip install python-binance
 from binance.exceptions import BinanceAPIException
 
 class TradingBot:
     def __init__(self):
-        self.config = load_config()
+        self.config = settings
         self.logger = logging.getLogger(__name__)
 
         # إعداد Binance Client
