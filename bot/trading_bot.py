@@ -1,10 +1,9 @@
 # bot/trading_bot.py
-import asyncio
 import logging
-from telegram.ext import Application, Defaults
+from telegram.ext import Application, CommandHandler, MessageHandler, filters, Defaults
 from telegram.constants import ParseMode
 from utils.config import settings
-from binance.client import Client  # pip install python-binance
+from binance.client import Client
 from binance.exceptions import BinanceAPIException
 
 class TradingBot:
@@ -12,55 +11,45 @@ class TradingBot:
         self.config = settings
         self.logger = logging.getLogger(__name__)
 
-        # إعداد Binance Client
+        # Binance Client
         self.binance = Client(
-            self.config.get('BINANCE_API_KEY'),
-            self.config.get('BINANCE_SECRET'),
-            testnet=self.config.get('USE_TESTNET', True)
+            self.config.BINANCE_API_KEY,
+            self.config.BINANCE_API_SECRET,
+            testnet=self.config.USE_TESTNET
         )
 
-    # دالة مساعدة لفتح أمر شراء مع Stop-Loss
-    async def buy_with_sl(self, symbol: str, usdt_amount: float, sl_pct: float = 2.0):
-        try:
-            # 1) احصل على سعر السوق
-            ticker = self.binance.get_symbol_ticker(symbol=symbol)
-            price = float(ticker['price'])
+    # -----------------------------------------
+    # معالج أمر /start
+    async def start(self, update, context):
+        await update.message.reply_text(
+            "👋 أهلاً! أنا بوت التداول الخاص بك.\n"
+            "يمكنك استخدام الأوامر لاحقاً أو إرسال أي رسالة لاختبار الاستجابة."
+        )
 
-            # 2) حدّد الكمية بالدقة المناسبة
-            qty = round(usdt_amount / price, 5)
+    # معالج أي رسالة نصية (للتأكد أن البوت يسمع)
+    async def echo(self, update, context):
+        self.logger.info(
+            f"📨 Received: '{update.message.text}' from user {update.effective_user.id}"
+        )
+        await update.message.reply_text(f"✅ استلمت: {update.message.text}")
 
-            # 3) أمر شراء سوقي
-            buy_order = self.binance.order_market_buy(symbol=symbol, quantity=qty)
-            self.logger.info(f"✅ شراء منفّذ: {buy_order}")
-
-            # 4) حساب سعر Stop-Loss
-            stop_price = round(price * (1 - sl_pct / 100), 2)
-
-            # 5) أمر Stop-Loss
-            sl_order = self.binance.create_order(
-                symbol=symbol,
-                side='SELL',
-                type='STOP_LOSS_LIMIT',
-                quantity=qty,
-                stopPrice=stop_price,
-                price=round(stop_price * 0.99, 2),  # أقل بقليل
-                timeInForce='GTC'
-            )
-            self.logger.info(f"⛔️ Stop-Loss موضوع: {sl_order}")
-            return buy_order, sl_order
-
-        except BinanceAPIException as e:
-            self.logger.error(f"خطأ Binance: {e}")
-            return None, None
-
-    # تشغيل البوت (كما كان)
+    # -----------------------------------------
     def run(self):
         defaults = Defaults(parse_mode=ParseMode.HTML)
-        application = Application.builder() \
-            .token(self.config['TELEGRAM_TOKEN']) \
-            .defaults(defaults) \
+        application = (
+            Application.builder()
+            .token(self.config.TELEGRAM_TOKEN)
+            .defaults(defaults)
             .build()
+        )
 
+        # تسجيل المعالجات
+        application.add_handler(CommandHandler("start", self.start))
+        application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, self.echo))
+
+        # تسجيل الـ handlers الأخرى (إن وجدت)
         from bot.handlers import setup
         setup(application)
+
+        self.logger.info("🔄 Bot is now listening for messages...")
         application.run_polling()
