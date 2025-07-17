@@ -3,6 +3,8 @@ import asyncio
 from decimal import Decimal
 from datetime import datetime
 from bot.service.binance_api import BinanceAPI
+from bot.handlers.commands import setup_extended
+setup_extended(application)
 from telegram import Update
 from telegram.ext import ContextTypes
 
