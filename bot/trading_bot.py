@@ -1,6 +1,8 @@
 # bot/trading_bot.py
 import logging
-from telegram.ext import Application, CommandHandler, MessageHandler, filters, Defaults
+from telegram.ext import (
+    Application, CommandHandler, MessageHandler, filters, Defaults
+)
 from telegram.constants import ParseMode
 from utils.config import settings
 from binance.client import Client
@@ -14,7 +16,7 @@ class TradingBot:
         # Binance Client
         self.binance = Client(
             self.config.BINANCE_API_KEY,
-            self.config.BINANCE_API_SECRET,
+            self.config.BINANCE_SECRET,
             testnet=self.config.USE_TESTNET
         )
 
@@ -26,7 +28,7 @@ class TradingBot:
             "يمكنك استخدام الأوامر لاحقاً أو إرسال أي رسالة لاختبار الاستجابة."
         )
 
-    # معالج أي رسالة نصية (للتأكد أن البوت يسمع)
+    # معالج أي رسالة نصية
     async def echo(self, update, context):
         self.logger.info(
             f"📨 Received: '{update.message.text}' from user {update.effective_user.id}"
@@ -43,11 +45,11 @@ class TradingBot:
             .build()
         )
 
-        # تسجيل المعالجات
+        # المعالجات الأساسية
         application.add_handler(CommandHandler("start", self.start))
         application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, self.echo))
 
-        # تسجيل الـ handlers الأخرى (إن وجدت)
+        # تسجيل الأوامر العربية الجديدة
         from bot.handlers import setup
         setup(application)
 
